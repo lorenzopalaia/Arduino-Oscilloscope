@@ -1,0 +1,6 @@
+- Run:
+	sh read_serial.sh
+- Exit:
+	ctrl + a
+	ctrl + k
+	y
