@@ -38,4 +38,5 @@ int main(int argc, char *argv[])
         }
         _delay_ms(delay);
     }
+    return 0;
 }
