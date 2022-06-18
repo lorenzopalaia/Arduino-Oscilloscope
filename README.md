@@ -42,6 +42,9 @@ Project was developed for "Sistemi Operativi" class, Ingegneria Informatica e Au
 <!-- GETTING STARTED -->
 ## Getting Started
 
+### Arduino Scheme
+![Arduino Scheme](./arduino-scheme.png)
+
 ### Installation
 
 1. Clone the repo
