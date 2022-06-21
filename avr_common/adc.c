@@ -1,4 +1,4 @@
-void adc_init(void)
+void ADC_init(void)
 {
     // 16MHz/128 = 125kHz the ADC reference clock
     ADCSRA |= ((1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0));
@@ -7,7 +7,7 @@ void adc_init(void)
     ADCSRA |= (1 << ADSC);
 } // Do an initial conversion
 
-uint16_t read_adc(uint8_t channel)
+uint16_t ADC_read(uint8_t channel)
 {
     ADMUX &= 0xE0;               // Clear bits MUX0-4
     ADMUX |= channel & 0x07;     // Defines the new ADC channel to be read by setting bits MUX0-2

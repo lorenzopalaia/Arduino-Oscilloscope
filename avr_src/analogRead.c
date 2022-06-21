@@ -53,7 +53,7 @@ void continuous_sample(uint16_t freq, uint8_t samples, uint8_t channels[])
         for (uint8_t ch = 0; ch < N_CHANNELS; ++ch)
             if (channels[ch] == 1)
             {
-                uint16_t val = read_adc(ch);
+                uint16_t val = ADC_read(ch);
                 put_sample(sample, ch, val);
             }
         _delay_ms(1000 / freq); // ms = 1000 / Hz
@@ -99,7 +99,7 @@ void buffered_sample(uint16_t freq, uint8_t samples, uint8_t channels[])
                     buf_cnt = 0; // reset counter
                 }
                 // push to buffer
-                uint16_t val = read_adc(ch);
+                uint16_t val = ADC_read(ch);
                 sample_send_buf[buf_cnt] = sample;
                 ch_send_buf[buf_cnt] = ch;
                 val_send_buf[buf_cnt] = val;
@@ -113,28 +113,21 @@ void buffered_sample(uint16_t freq, uint8_t samples, uint8_t channels[])
 int main(int argc, char *argv[])
 {
     UART_init();
-    adc_init();
+    ADC_init();
 
-    while (1)
+    while (1) // main loop
     {
         uint16_t freq;
         uint8_t samples;
         uint8_t mode;
         uint8_t channels[N_CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0}; // 0: disabled, 1:enabled
 
-        // ask for params, TODO: delete, just for dev
-        // UART_putString((uint8_t *)"Ready for next sampling. Waiting for params [freq samples mode, channels: [1 2 ...]]\n");
-
         get_params(&freq, &samples, &mode, channels);
 
         if (mode == CONTINUOUS_MODE)
-        {
             continuous_sample(freq, samples, channels);
-        }
         else if (mode == BUFFERED_MODE)
-        {
             buffered_sample(freq, samples, channels);
-        }
     }
     return 0;
 }

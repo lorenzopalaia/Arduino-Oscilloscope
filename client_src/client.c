@@ -1,15 +1,78 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
 
 #define CHANNELS 8
 
+#define DEFAULT_BUFFERS_SIZE 256
+
+// validation macros
 #define FREQ_CHECK(FREQ) (FREQ >= 1 && FREQ <= 10000)
 #define SAMPLES_CHECK(SAMPLES) (SAMPLES >= 1 && SAMPLES <= 10000)
 #define MODE_CHECK(MODE) (MODE == 0 || MODE == 1)
+#define ENABLED_CHANNEL_CHECK(ENABLED) (ENABLED == 0 || ENABLED == 1)
+
+int open_arduino()
+{
+    FILE *fp = popen("find /dev/cu.usbmodem*", "r"); // subprocess
+    char path[DEFAULT_BUFFERS_SIZE];
+    if (fp == NULL)
+    {
+        printf("Arduino not found!\n");
+        exit(EXIT_FAILURE);
+    }
+    fgets(path, sizeof(path), fp); // read subprocess output
+    path[strcspn(path, "\n")] = 0; // remove newline from fgets() reading
+    pclose(fp);
+
+    if (path[0] != '/') // if output does not start with '/' -> find throws a error -> serial device not found
+    {
+        printf("Arduino not found!\n");
+        exit(EXIT_FAILURE);
+    }
+    printf("Found Arduino!\n");
+
+    int fd = open(path, O_RDWR | O_NOCTTY | O_SYNC); // open file descriptor
+    if (fd < 0)                                      // check opening errors
+    {
+        printf("Error opening!\n");
+        exit(EXIT_FAILURE);
+    }
+    printf("Arduino connection open!\n");
+    return fd;
+}
+
+void get_channels(int channels[CHANNELS])
+{
+    int invalid_input;
+    do
+    {
+        invalid_input = 0;
+        char input[DEFAULT_BUFFERS_SIZE];
+        printf("Insert enabled channels (with spacing) [8 values: {0: disabled, 1: enabled}]: ");
+        scanf("%d %d %d %d %d %d %d %d", &channels[0], &channels[1], &channels[2], &channels[3], &channels[4], &channels[5], &channels[6], &channels[7]);
+        // validation
+        int enabled = 0;
+        for (int i = 0; i < CHANNELS; ++i)
+        {
+            if (!ENABLED_CHANNEL_CHECK(channels[i])) // invalid input found
+            {
+                invalid_input = 1;
+                break;
+            }
+            if (channels[i])
+                ++enabled;
+        }
+        if (enabled == 0) // if not one channel enabled at least
+            invalid_input = 1;
+    } while (invalid_input);
+}
 
 int main(int argc, char *argv[])
 {
-    // TODO: controllare connessione con arduino
+    // controllare connessione con arduino
+    // TODO: imposta parametri di connessione con arduino
     // loop infinito
     //   DONE: imposta parametri: canali, frequenza, # campioni, modalità
     //   DONE: mostra resoconto e chiedi conferma
@@ -18,24 +81,26 @@ int main(int argc, char *argv[])
     //   TODO: ricevi samples
     //   TODO: dumpa su file
 
-    system("clear");
     // welcome message
+    system("clear");
+    printf("Welcome to Arduino Oscilloscope\n");
 
     // check Arduino connection
+    printf("Looking for Arduino on serial port...\n");
+    int arduino = open_arduino();
 
     while (1) // main loop
     {
         int freq;
         int samples;
         int mode;
-        int channels[CHANNELS];
+        int channels[CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0}; // 0: disabled, 1: enabled
 
         char ready = 'N';
 
         // params setup: channels, frequency, # samples, mode
         while (ready != 'Y' && ready != 'y')
         {
-            system("clear");
             // input param loop
 
             // get freq param from user
@@ -44,43 +109,50 @@ int main(int argc, char *argv[])
                 printf("Insert sampling frquency [1Hz - 10000Hz]: ");
                 scanf("%d", &freq);
             } while (!FREQ_CHECK(freq));
-
             // get samples param from user
             do
             {
                 printf("Insert samples [1 - 10000]: ");
                 scanf("%d", &samples);
             } while (!SAMPLES_CHECK(samples));
-
             // get mode param from user
             do
             {
                 printf("Insert mode {0: continuos, 1: buffered}: ");
                 scanf("%d", &mode);
             } while (!MODE_CHECK(mode));
-
             // get channels param from user
-            // do
-            // {
-            //     printf("Insert channels [0 - 7]: ");
-            //     // scanf("%s", input);
-            //     printf("%s", input);
-            // } while (!MODE_CHECK(mode));
+            get_channels(channels);
 
             system("clear");
-
             printf("Freq: %dHz\n", freq);
             printf("Samples: %d\n", samples);
             printf("Mode: %d\n", mode);
-
-            printf("Sampled output length will be %.2fs\n", 1 / (float)freq * samples);
-
+            printf("Enabled Channels: ");
+            for (int i = 0; i < CHANNELS; ++i)
+                printf("%d: %d\t", i, channels[i]);
+            printf("\nSampled output length will be %.2fs\n", 1 / (float)freq * samples);
             printf("Do you want to start sampling? [Y/N] ");
             scanf(" %c", &ready);
+            system("clear");
         }
 
-        // Send params to Arduino
-        printf("Sent");
+        // format out string
+        char out_str[DEFAULT_BUFFERS_SIZE];
+        snprintf(out_str, DEFAULT_BUFFERS_SIZE, "%d %d %d,", freq, samples, mode);
+        for (int i = 0; i < CHANNELS; ++i)
+        {
+            if (channels[i] == 1) // if channel enabled
+            {
+                char tmp[DEFAULT_BUFFERS_SIZE];
+                snprintf(tmp, DEFAULT_BUFFERS_SIZE, " %d", i);
+                strcat(out_str, tmp);
+            }
+        }
+
+        // Send params to Arduino, TODO: delete, just for dev
+        printf("Sending: %s\n", out_str);
+        printf("Sent\n");
     }
 
     return 0;
