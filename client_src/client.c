@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
+#include <termios.h>
+#include <unistd.h>
 
 #define CHANNELS 8
 
@@ -43,6 +45,47 @@ int open_arduino()
     return fd;
 }
 
+int serial_set_interface_attribs(int fd, int speed, int parity)
+{
+    struct termios tty;
+    memset(&tty, 0, sizeof tty);
+    if (tcgetattr(fd, &tty) != 0)
+    {
+        printf("Error from tcgetattr\n");
+        return -1;
+    }
+    switch (speed)
+    {
+    case 19200:
+        speed = B19200;
+        break;
+    case 57600:
+        speed = B57600;
+        break;
+    case 115200:
+        speed = B115200;
+        break;
+    default:
+        printf("Cannot set baudrate %d\n", speed);
+        return -1;
+    }
+    cfsetospeed(&tty, speed);
+    cfsetispeed(&tty, speed);
+    cfmakeraw(&tty);
+    // enable reading
+    tty.c_cflag &= -(PARENB | PARODD); // shut off parity
+    tty.c_cflag |= parity;
+    tty.c_cflag = (tty.c_cflag & -CSIZE) | CS8; // 8-bit chars
+
+    if (tcsetattr(fd, TCSANOW, &tty) != 0)
+    {
+        printf("Error from tcsettatr\n");
+        return -1;
+    }
+    printf("Arduino connection setup correctly!\n");
+    return 0;
+}
+
 void get_channels(int channels[CHANNELS])
 {
     int invalid_input;
@@ -76,8 +119,7 @@ int main(int argc, char *argv[])
     // loop infinito
     //   DONE: imposta parametri: canali, frequenza, # campioni, modalità
     //   DONE: mostra resoconto e chiedi conferma
-    //   TODO: invia parametri ad Arduino
-    //   TODO: attesa elaborazione
+    //   DONE: invia parametri ad Arduino
     //   TODO: ricevi samples
     //   TODO: dumpa su file
 
@@ -88,6 +130,12 @@ int main(int argc, char *argv[])
     // check Arduino connection
     printf("Looking for Arduino on serial port...\n");
     int arduino = open_arduino();
+    int res = serial_set_interface_attribs(arduino, 19200, 0);
+    if (res != 0)
+    {
+        printf("Error during serial attributes setup\n");
+        exit(EXIT_FAILURE);
+    }
 
     while (1) // main loop
     {
@@ -150,9 +198,31 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Send params to Arduino, TODO: delete, just for dev
-        printf("Sending: %s\n", out_str);
-        printf("Sent\n");
+        // printf("Sending: %s\n", out_str);
+        ssize_t res = write(arduino, &out_str, sizeof(out_str));
+        if (res == -1)
+        {
+            printf("Error writing on serial\n");
+            exit(EXIT_FAILURE);
+        }
+
+        // calculate size of recv buffer
+        // required samples * channels (= 8, fixed, worst case scenario) * recv string format length (worst case scenario)
+        int RECV_BUF_SIZE = samples * CHANNELS * (sizeof(samples) + sizeof(" ") + sizeof(CHANNELS) + sizeof(" ") + sizeof(int));
+        char recv_buf[RECV_BUF_SIZE];
+        // reading cycle
+        // TODO: improve everything
+        //      read line by line
+        //          then append to recv buffer
+        //          or
+        //          handle line: tokenize, append to respective dumping file (this way should minimize recv buffer size, just recv string length)
+        //      stop reading (read return value (best way)? stopping msg by arduino (worst way)?)
+        do
+        {
+            res = read(arduino, recv_buf, sizeof(recv_buf));
+            printf("Recv bytes: %ld\n", res);
+            printf("%s\n", recv_buf);
+        } while (res != -1 || res != 0);
     }
 
     return 0;

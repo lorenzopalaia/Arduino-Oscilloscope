@@ -46,7 +46,7 @@ void put_sample(uint8_t sample, uint8_t channel, uint16_t val)
     UART_putString((uint8_t *)"\n");
 }
 
-void continuous_sample(uint16_t freq, uint8_t samples, uint8_t channels[])
+void continuous_sampling(uint16_t freq, uint8_t samples, uint8_t channels[])
 {
     for (uint8_t sample = 0; sample < samples; ++sample)
     {
@@ -60,7 +60,7 @@ void continuous_sample(uint16_t freq, uint8_t samples, uint8_t channels[])
     }
 }
 
-void buffered_sample(uint16_t freq, uint8_t samples, uint8_t channels[])
+void buffered_sampling(uint16_t freq, uint8_t samples, uint8_t channels[])
 {
 
     // sending buffers
@@ -125,9 +125,9 @@ int main(int argc, char *argv[])
         get_params(&freq, &samples, &mode, channels);
 
         if (mode == CONTINUOUS_MODE)
-            continuous_sample(freq, samples, channels);
+            continuous_sampling(freq, samples, channels);
         else if (mode == BUFFERED_MODE)
-            buffered_sample(freq, samples, channels);
+            buffered_sampling(freq, samples, channels);
     }
     return 0;
 }
