@@ -15,6 +15,22 @@
 #define MODE_CHECK(MODE) (MODE == 0 || MODE == 1)
 #define ENABLED_CHANNEL_CHECK(ENABLED) (ENABLED == 0 || ENABLED == 1)
 
+void open_output_fds(int output_fds[CHANNELS])
+{
+    for (int i = 0; i < CHANNELS; ++i)
+    {
+        char out_path[24];
+        snprintf(out_path, 24, "../outputs/out_ch%d.txt", i);
+        int fd = open(out_path, O_WRONLY);
+        if (fd < 0) // check opening errors
+        {
+            printf("Error opening output files! Missing: %s\n", out_path);
+            exit(EXIT_FAILURE);
+        }
+        output_fds[i] = fd;
+    }
+}
+
 int open_arduino()
 {
     FILE *fp = popen("find /dev/cu.usbmodem*", "r"); // subprocess
@@ -120,8 +136,13 @@ int main(int argc, char *argv[])
     //   DONE: imposta parametri: canali, frequenza, # campioni, modalità
     //   DONE: mostra resoconto e chiedi conferma
     //   DONE: invia parametri ad Arduino
-    //   TODO: ricevi samples
+    //   DONE: ricevi samples
     //   TODO: dumpa su file
+    //   TODO: controllare chiusura di tutto
+
+    // open file descriptors, store them inside an array of file descriptors
+    int output_fds[CHANNELS];
+    open_output_fds(output_fds);
 
     // welcome message
     system("clear");
@@ -209,7 +230,8 @@ int main(int argc, char *argv[])
         // calculate size of recv buffer
         // required samples * channels (= 8, fixed, worst case scenario) * recv string format length (worst case scenario)
         int RECV_BUF_SIZE = samples * CHANNELS * (sizeof(samples) + sizeof(" ") + sizeof(CHANNELS) + sizeof(" ") + sizeof(int));
-        char recv_buf[RECV_BUF_SIZE];
+        int test_size = 6 * sizeof(char) + sizeof("\n");
+        char recv_buf[test_size];
         // reading cycle
         // TODO: improve everything
         //      read line by line
@@ -217,12 +239,22 @@ int main(int argc, char *argv[])
         //          or
         //          handle line: tokenize, append to respective dumping file (this way should minimize recv buffer size, just recv string length)
         //      stop reading (read return value (best way)? stopping msg by arduino (worst way)?)
-        do
+
+        while (1)
         {
-            res = read(arduino, recv_buf, sizeof(recv_buf));
-            printf("Recv bytes: %ld\n", res);
-            printf("%s\n", recv_buf);
-        } while (res != -1 || res != 0);
+            // set res to read bytes, then add string terminator
+            res = read(arduino, recv_buf, sizeof(recv_buf) - 1);
+            if (res < 0)
+                break;
+            else
+            {
+                recv_buf[res] = '\0';
+                int ch, val;
+                printf("%s", recv_buf);
+                // sscanf(recv_buf, "%d %d", &ch, &val);
+                // printf("%d %d", ch, val);
+            }
+        }
     }
 
     return 0;

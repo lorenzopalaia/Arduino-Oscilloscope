@@ -38,8 +38,8 @@ void put_sample(uint8_t sample, uint8_t channel, uint16_t val)
     uint16_t utoa_tmp_buffer[1];
 
     // format of string put in UART will be "sample ch val" in order to be tokenized by client
-    UART_putString((uint8_t *)utoa(sample, (char *)utoa_tmp_buffer, 10)); // unsigned to string conversion (base 10)
-    UART_putString((uint8_t *)" ");
+    // UART_putString((uint8_t *)utoa(sample, (char *)utoa_tmp_buffer, 10)); // unsigned to string conversion (base 10)
+    // UART_putString((uint8_t *)" ");
     UART_putString((uint8_t *)utoa(channel, (char *)utoa_tmp_buffer, 10));
     UART_putString((uint8_t *)" ");
     UART_putString((uint8_t *)utoa(val, (char *)utoa_tmp_buffer, 10));
