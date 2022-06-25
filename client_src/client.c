@@ -21,7 +21,7 @@ void open_output_fds(int output_fds[CHANNELS])
     {
         char out_path[24];
         snprintf(out_path, 24, "../outputs/out_ch%d.txt", i);
-        int fd = open(out_path, O_WRONLY);
+        int fd = open(out_path, O_WRONLY | O_CREAT);
         if (fd < 0) // check opening errors
         {
             printf("Error opening output files! Missing: %s\n", out_path);
@@ -219,7 +219,6 @@ int main(int argc, char *argv[])
             }
         }
 
-        // printf("Sending: %s\n", out_str);
         ssize_t res = write(arduino, &out_str, sizeof(out_str));
         if (res == -1)
         {
@@ -227,32 +226,28 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
-        // calculate size of recv buffer
-        // required samples * channels (= 8, fixed, worst case scenario) * recv string format length (worst case scenario)
-        int RECV_BUF_SIZE = samples * CHANNELS * (sizeof(samples) + sizeof(" ") + sizeof(CHANNELS) + sizeof(" ") + sizeof(int));
-        int test_size = 6 * sizeof(char) + sizeof("\n");
-        char recv_buf[test_size];
-        // reading cycle
-        // TODO: improve everything
-        //      read line by line
-        //          then append to recv buffer
-        //          or
-        //          handle line: tokenize, append to respective dumping file (this way should minimize recv buffer size, just recv string length)
-        //      stop reading (read return value (best way)? stopping msg by arduino (worst way)?)
-
+        char r;
+        char recv_buf[8]; // len of 6 chars + \n + \0 = 8
         while (1)
         {
-            // set res to read bytes, then add string terminator
-            res = read(arduino, recv_buf, sizeof(recv_buf) - 1);
-            if (res < 0)
+            res = read(arduino, &r, 1);
+            if (res < 0) // terminate reading cycle, TODO: fix, not working
                 break;
             else
             {
-                recv_buf[res] = '\0';
-                int ch, val;
-                printf("%s", recv_buf);
-                // sscanf(recv_buf, "%d %d", &ch, &val);
-                // printf("%d %d", ch, val);
+                if (r == '\n')
+                {
+                    // elaboration
+                    // TODO: file needs to be clear
+                    int ch, val;
+                    char out[6]; // len of max. 4 chars + \n + \0
+                    sscanf(recv_buf, "%d %d", &ch, &val);
+                    snprintf(out, 6, "%d\n", val); // string formatter
+                    write(output_fds[ch], out, 6); // fd to be written is estabilished by ch variable which selects the correct index
+                    memset(recv_buf, 0, 8);        // clear recv_buf
+                }
+                else
+                    strncat(buf, &r, 1);
             }
         }
     }
