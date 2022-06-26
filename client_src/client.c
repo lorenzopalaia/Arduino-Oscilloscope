@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        ssize_t res = write(arduino, &out_str, sizeof(out_str));
+        ssize_t res = write(arduino, &out_str, sizeof(out_str)); // replace with strlen(out_str) (?)
         if (res == -1)
         {
             printf("Error writing on serial\n");
@@ -243,9 +243,9 @@ int main(int argc, char *argv[])
                     char out[9]; // len of 7 chars + \n + \0
                     sscanf(wr_buf, "%d %f", &ch, &val);
                     val = 5 * val / 1024;
-                    snprintf(out, 6, "%.5f\n", val); // string formatter + value conversion
+                    snprintf(out, 9, "%.5f\n", val); // string formatter + value conversion
                     // fd to be written is estabilished by ch variable which selects the correct index
-                    ssize_t wr_bytes = write(output_fds[ch], out, 6);
+                    ssize_t wr_bytes = write(output_fds[ch], out, strlen(out));
                     if (wr_bytes == -1)
                     {
                         printf("Error writing on output\n");
