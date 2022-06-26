@@ -4,6 +4,7 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+#include <signal.h>
 
 #define CHANNELS 8
 
@@ -14,6 +15,9 @@
 #define SAMPLES_CHECK(SAMPLES) (SAMPLES >= 1 && SAMPLES <= 10000)
 #define MODE_CHECK(MODE) (MODE == 0 || MODE == 1)
 #define ENABLED_CHANNEL_CHECK(ENABLED) (ENABLED == 0 || ENABLED == 1)
+
+static int output_fds[CHANNELS];
+static int arduino;
 
 void open_output_fds(int output_fds[CHANNELS])
 {
@@ -29,10 +33,26 @@ void open_output_fds(int output_fds[CHANNELS])
         }
         output_fds[i] = fd;
     }
+    printf("File descriptors opened correctly!\n");
+}
+
+void close_output_fds(int output_fds[CHANNELS])
+{
+    for (int i = 0; i < CHANNELS; ++i)
+    {
+        int res = close(output_fds[i]);
+        if (res == -1) // check closing errors
+        {
+            printf("Error closing output files!\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    printf("File descriptors closed correctly!\n");
 }
 
 int open_arduino()
 {
+    printf("Looking for Arduino on serial port...\n");
     FILE *fp = popen("find /dev/cu.usbmodem*", "r"); // subprocess
     char path[DEFAULT_BUFFERS_SIZE];
     if (fp == NULL)
@@ -54,11 +74,22 @@ int open_arduino()
     int fd = open(path, O_RDWR | O_NOCTTY | O_SYNC); // open file descriptor
     if (fd < 0)                                      // check opening errors
     {
-        printf("Error opening!\n");
+        printf("Error opening Arduino connection!\n");
         exit(EXIT_FAILURE);
     }
     printf("Arduino connection open!\n");
     return fd;
+}
+
+void close_arduino(int arduino)
+{
+    int res = close(arduino);
+    if (res == -1) // check closing errors
+    {
+        printf("Error closing Arduino connection!\n");
+        exit(EXIT_FAILURE);
+    }
+    printf("Closed Arduino connection!\n");
 }
 
 int serial_set_interface_attribs(int fd, int speed, int parity)
@@ -128,10 +159,18 @@ void get_channels(int channels[CHANNELS])
     } while (invalid_input);
 }
 
+void INThandler(int _)
+{
+    printf("\nCatch keyboard interruption! Terminating...\n");
+    close_output_fds(output_fds);
+    close_arduino(arduino);
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char *argv[])
 {
     // controllare connessione con arduino
-    // TODO: imposta parametri di connessione con arduino
+    // DONE: imposta parametri di connessione con arduino
     // loop infinito
     //   DONE: imposta parametri: canali, frequenza, # campioni, modalità
     //   DONE: mostra resoconto e chiedi conferma
@@ -140,23 +179,26 @@ int main(int argc, char *argv[])
     //   DONE: dumpa su file
     //   TODO: controllare chiusura di tutto
 
-    // open file descriptors, store them inside an array of file descriptors
-    int output_fds[CHANNELS];
-    open_output_fds(output_fds);
+    // install a keyboard INT handler
+    struct sigaction act;
+    act.sa_handler = INThandler;
+    sigaction(SIGINT, &act, NULL);
 
     // welcome message
     system("clear");
     printf("Welcome to Arduino Oscilloscope\n");
 
     // check Arduino connection
-    printf("Looking for Arduino on serial port...\n");
-    int arduino = open_arduino();
+    arduino = open_arduino();
     int res = serial_set_interface_attribs(arduino, 19200, 0);
     if (res != 0)
     {
         printf("Error during serial attributes setup\n");
         exit(EXIT_FAILURE);
     }
+
+    // open file descriptors, store them inside an array of file descriptors
+    open_output_fds(output_fds);
 
     while (1) // main loop
     {
@@ -270,6 +312,10 @@ int main(int argc, char *argv[])
             break;
         */
     }
+
+    // close
+    close_output_fds(output_fds);
+    close_arduino(arduino);
 
     return 0;
 }
