@@ -21,7 +21,7 @@ void open_output_fds(int output_fds[CHANNELS])
     {
         char out_path[24];
         snprintf(out_path, 24, "../outputs/out_ch%d.txt", i);
-        int fd = open(out_path, O_WRONLY | O_CREAT);
+        int fd = open(out_path, O_WRONLY | O_CREAT | O_TRUNC, 644);
         if (fd < 0) // check opening errors
         {
             printf("Error opening output files! Missing: %s\n", out_path);
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
     //   DONE: mostra resoconto e chiedi conferma
     //   DONE: invia parametri ad Arduino
     //   DONE: ricevi samples
-    //   TODO: dumpa su file
+    //   DONE: dumpa su file
     //   TODO: controllare chiusura di tutto
 
     // open file descriptors, store them inside an array of file descriptors
@@ -227,29 +227,48 @@ int main(int argc, char *argv[])
         }
 
         char r;
-        char recv_buf[8]; // len of 6 chars + \n + \0 = 8
+        char wr_buf[8]; // len of 6 chars + \n + \0 = 8
         while (1)
         {
             res = read(arduino, &r, 1);
-            if (res < 0) // terminate reading cycle, TODO: fix, not working
+            if (r == '\0') // terminate reading cycle
                 break;
             else
             {
                 if (r == '\n')
                 {
                     // elaboration
-                    // TODO: file needs to be clear
-                    int ch, val;
-                    char out[6]; // len of max. 4 chars + \n + \0
-                    sscanf(recv_buf, "%d %d", &ch, &val);
-                    snprintf(out, 6, "%d\n", val); // string formatter
-                    write(output_fds[ch], out, 6); // fd to be written is estabilished by ch variable which selects the correct index
-                    memset(recv_buf, 0, 8);        // clear recv_buf
+                    int ch;
+                    float val;
+                    char out[9]; // len of 7 chars + \n + \0
+                    sscanf(wr_buf, "%d %f", &ch, &val);
+                    val = 5 * val / 1024;
+                    snprintf(out, 6, "%.5f\n", val); // string formatter + value conversion
+                    // fd to be written is estabilished by ch variable which selects the correct index
+                    ssize_t wr_bytes = write(output_fds[ch], out, 6);
+                    if (wr_bytes == -1)
+                    {
+                        printf("Error writing on output\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    memset(wr_buf, 0, 8); // clear wr_buf
                 }
                 else
-                    strncat(buf, &r, 1);
+                    strncat(wr_buf, &r, 1);
             }
         }
+
+        printf("Dump completed!\n");
+        /*
+        char cont;
+        do
+        {
+            printf("Do you want to proceed with next sampling? [Y/N] ");
+            scanf(" %c", &cont);
+        } while (cont != 'N' || cont != 'n' || cont != 'Y' || cont != 'y');
+        if (cont == 'N' || cont == 'n')
+            break;
+        */
     }
 
     return 0;

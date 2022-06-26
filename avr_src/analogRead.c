@@ -58,6 +58,7 @@ void continuous_sampling(uint16_t freq, uint8_t samples, uint8_t channels[])
             }
         _delay_ms(1000 / freq); // ms = 1000 / Hz
     }
+    UART_putChar('\0');
 }
 
 void buffered_sampling(uint16_t freq, uint8_t samples, uint8_t channels[])
@@ -108,6 +109,7 @@ void buffered_sampling(uint16_t freq, uint8_t samples, uint8_t channels[])
             }
         _delay_ms(1000 / freq); // ms = 1000 / Hz
     }
+    UART_putChar('\0');
 }
 
 int main(int argc, char *argv[])

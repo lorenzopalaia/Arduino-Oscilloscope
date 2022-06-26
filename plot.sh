@@ -1,0 +1,1 @@
+gnuplot -persist ./plot_script.p
