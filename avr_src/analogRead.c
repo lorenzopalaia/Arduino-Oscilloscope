@@ -67,43 +67,30 @@ void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
     uint16_t val_send_buf[MAX_BUF];
     uint8_t buf_cnt = 0;
 
-    // check buffer fullness
-    // if full
-    //     send
-    //     empty buffers (unnecessary, just overwrite values)
-    //     reset counter
-    // sample
-    // push to buffer
-    // update counter
-
     for (uint8_t sample = 0; sample < samples; ++sample)
     {
         for (uint8_t ch = 0; ch < CHANNELS; ++ch)
-            if (channels[ch] == 1)
+            if (channels[ch] == ENABLED)
             {
                 // this will be an async IRQ routine, now it's affecting sampling freq
                 // TODO: make it work
-                if (buf_cnt == MAX_BUF - 1) // if buffer full
+                if (buf_cnt == sizeof(ch_send_buf) - 1) // if buffer full empty and reset
                 {
-                    // empty and reset
-                    for (uint8_t i = 0; i < MAX_BUF; ++i)
-                    {
-                        put_sample(ch_send_buf[i], val_send_buf[i]); // send
-                        // reset, unnecessary, we could simply overwrite
-                        ch_send_buf[i] = 0;
-                        val_send_buf[i] = 0;
-                    }
-                    buf_cnt = 0; // reset counter
+                    for (uint8_t i = 0; i < sizeof(ch_send_buf) - 1; ++i)
+                        put_sample(ch_send_buf[i], val_send_buf[i]); // send all buffer elements
+                    buf_cnt = 0;                                     // reset counter
                 }
-                // push to buffer
+                // read, push to buffer and update counter
                 uint16_t val = ADC_read(ch);
                 ch_send_buf[buf_cnt] = ch;
                 val_send_buf[buf_cnt] = val;
-                // update counter
                 ++buf_cnt;
             }
         _delay_ms(1000 / freq); // ms = 1000 / Hz
     }
+    // empty residuals in buffer
+    for (uint8_t i = 0; i < buf_cnt; ++i)
+        put_sample(ch_send_buf[i], val_send_buf[i]);
     UART_putChar('\0');
 }
 

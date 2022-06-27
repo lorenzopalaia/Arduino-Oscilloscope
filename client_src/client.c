@@ -19,8 +19,8 @@
 #define MODE_CHECK(MODE) (MODE == 0 || MODE == 1)
 #define ENABLED_CHANNEL_CHECK(CHANNEL) (CHANNEL == DISABLED || CHANNEL == ENABLED)
 
-static int output_fds[CHANNELS];
-static int arduino;
+int output_fds[CHANNELS];
+int arduino;
 
 void open_output_fds(int output_fds[CHANNELS])
 {
