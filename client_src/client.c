@@ -10,11 +10,14 @@
 
 #define DEFAULT_BUFFERS_SIZE 256
 
+#define DISABLED 0
+#define ENABLED 1
+
 // validation macros
 #define FREQ_CHECK(FREQ) (FREQ >= 1 && FREQ <= 10000)
 #define SAMPLES_CHECK(SAMPLES) (SAMPLES >= 1 && SAMPLES <= 10000)
 #define MODE_CHECK(MODE) (MODE == 0 || MODE == 1)
-#define ENABLED_CHANNEL_CHECK(ENABLED) (ENABLED == 0 || ENABLED == 1)
+#define ENABLED_CHANNEL_CHECK(CHANNEL) (CHANNEL == DISABLED || CHANNEL == ENABLED)
 
 static int output_fds[CHANNELS];
 static int arduino;
@@ -143,7 +146,7 @@ void get_channels(int channels[CHANNELS])
         printf("Insert enabled channels (with spacing) [8 values: {0: disabled, 1: enabled}]: ");
         scanf("%d %d %d %d %d %d %d %d", &channels[0], &channels[1], &channels[2], &channels[3], &channels[4], &channels[5], &channels[6], &channels[7]);
         // validation
-        int enabled = 0;
+        int enabled_channels = 0;
         for (int i = 0; i < CHANNELS; ++i)
         {
             if (!ENABLED_CHANNEL_CHECK(channels[i])) // invalid input found
@@ -152,9 +155,9 @@ void get_channels(int channels[CHANNELS])
                 break;
             }
             if (channels[i])
-                ++enabled;
+                ++enabled_channels;
         }
-        if (enabled == 0) // if not one channel enabled at least
+        if (enabled_channels == 0) // if not one channel enabled at least
             invalid_input = 1;
     } while (invalid_input);
 }
@@ -205,7 +208,7 @@ int main(int argc, char *argv[])
         int freq;
         int samples;
         int mode;
-        int channels[CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0}; // 0: disabled, 1: enabled
+        int channels[CHANNELS] = {DISABLED, DISABLED, DISABLED, DISABLED, DISABLED, DISABLED, DISABLED, DISABLED};
 
         char ready = 'N';
 
@@ -242,8 +245,7 @@ int main(int argc, char *argv[])
             printf("Enabled Channels: ");
             for (int i = 0; i < CHANNELS; ++i)
                 printf("%d: %d\t", i, channels[i]);
-            printf("\nSampled output length will be %.2fs\n", 1 / (float)freq * samples);
-            printf("Do you want to start sampling? [Y/N] ");
+            printf("\nDo you want to start sampling? [Y/N] ");
             scanf(" %c", &ready);
             system("clear");
         }
@@ -261,7 +263,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        ssize_t res = write(arduino, &out_str, sizeof(out_str)); // replace with strlen(out_str) (?)
+        ssize_t res = write(arduino, &out_str, strlen(out_str) + 1);
         if (res == -1)
         {
             printf("Error writing on serial\n");
@@ -313,7 +315,7 @@ int main(int argc, char *argv[])
         */
     }
 
-    // close
+    // close file descriptors
     close_output_fds(output_fds);
     close_arduino(arduino);
 
