@@ -14,7 +14,7 @@
 #define ENABLED 1
 
 // validation macros
-#define FREQ_CHECK(FREQ) (FREQ >= 1 && FREQ <= 10000)
+#define FREQ_CHECK(FREQ) (FREQ >= 1 && FREQ <= 1000)
 #define SAMPLES_CHECK(SAMPLES) (SAMPLES >= 1 && SAMPLES <= 10000)
 #define MODE_CHECK(MODE) (MODE == 0 || MODE == 1)
 #define ENABLED_CHANNEL_CHECK(CHANNEL) (CHANNEL == DISABLED || CHANNEL == ENABLED)
@@ -220,7 +220,7 @@ int main(int argc, char *argv[])
             // get freq param from user
             do
             {
-                printf("Insert sampling frquency [1Hz - 10000Hz]: ");
+                printf("Insert sampling frquency [1Hz - 1000Hz]: ");
                 scanf("%d", &freq);
             } while (!FREQ_CHECK(freq));
             // get samples param from user
@@ -275,6 +275,7 @@ int main(int argc, char *argv[])
         while (1)
         {
             res = read(arduino, &r, 1);
+            // printf("%c", r);
             if (r == '\0') // terminate reading cycle
                 break;
             else

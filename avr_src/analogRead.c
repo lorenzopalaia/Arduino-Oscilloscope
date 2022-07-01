@@ -6,8 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <avr/io.h>
+#include "../avr_common/int.c"
 #include "../avr_common/adc.c"
 #include "../avr_common/uart.h"
+#include <avr/interrupt.h>
 
 #define CONTINUOUS_MODE 0
 #define BUFFERED_MODE 1
@@ -18,6 +20,12 @@
 #define CHANNELS 8
 
 #define MAX_BUF 256
+
+// sending buffers and counter used for buffered sending mode
+// need to be global in order to be handled by ISR
+uint8_t ch_send_buf[MAX_BUF];
+uint16_t val_send_buf[MAX_BUF];
+uint16_t buf_cnt = 0;
 
 void get_params(uint16_t *freq, uint16_t *samples, uint8_t *mode, uint8_t channels[])
 {
@@ -44,6 +52,18 @@ void put_sample(uint8_t channel, uint16_t val)
     UART_putString((uint8_t *)out_str);
 }
 
+ISR(TIMER5_COMPA_vect)
+{
+    // TODO: last value in buffer not pushed to UART
+    // using MAX_BUF instead of MAX_BUF - 1 -> everything stuck, why?
+    if (buf_cnt >= MAX_BUF - 1) // if buffer full
+    {
+        for (uint8_t i = 0; i < MAX_BUF - 1; ++i)
+            put_sample(ch_send_buf[i], val_send_buf[i]); // send all buffer elements
+        buf_cnt = 0;                                     // reset counter
+    }
+}
+
 void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
 {
     for (uint8_t sample = 0; sample < samples; ++sample)
@@ -61,26 +81,17 @@ void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
 
 void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
 {
-
-    // sending buffers
-    uint8_t ch_send_buf[MAX_BUF];
-    uint16_t val_send_buf[MAX_BUF];
-    uint8_t buf_cnt = 0;
+    // enable interrupt on timer 5
+    INT_enable();
 
     for (uint8_t sample = 0; sample < samples; ++sample)
     {
         for (uint8_t ch = 0; ch < CHANNELS; ++ch)
             if (channels[ch] == ENABLED)
             {
-                // this will be an async IRQ routine, now it's affecting sampling freq
-                // TODO: make it work
-                if (buf_cnt == sizeof(ch_send_buf) - 1) // if buffer full empty and reset
-                {
-                    for (uint8_t i = 0; i < sizeof(ch_send_buf) - 1; ++i)
-                        put_sample(ch_send_buf[i], val_send_buf[i]); // send all buffer elements
-                    buf_cnt = 0;                                     // reset counter
-                }
-                // read, push to buffer and update counter
+                // make reading and push to buffers
+                // this cycle will be interrupted by ISR then will resume
+                // TODO: busy waiting in order to wait until the empty interrupt occurs instead of simple interrupt
                 uint16_t val = ADC_read(ch);
                 ch_send_buf[buf_cnt] = ch;
                 val_send_buf[buf_cnt] = val;
@@ -88,6 +99,10 @@ void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
             }
         _delay_ms(1000 / freq); // ms = 1000 / Hz
     }
+
+    // disable interrupt on timer 5
+    INT_disable();
+
     // empty residuals in buffer
     for (uint8_t i = 0; i < buf_cnt; ++i)
         put_sample(ch_send_buf[i], val_send_buf[i]);
@@ -96,6 +111,7 @@ void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
 
 int main(int argc, char *argv[])
 {
+    INT_init();
     UART_init();
     ADC_init();
 
