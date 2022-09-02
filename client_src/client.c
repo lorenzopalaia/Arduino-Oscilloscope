@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
         {
             res = read(arduino, &r, 1);
             // printf("%c", r);
-            if (r == '\0') // terminate reading cycle
+            if (r == '-') // terminate reading cycle
                 break;
             else
             {

@@ -16,6 +16,8 @@
 #define DISABLED 0
 #define ENABLED 1
 
+#define TERMINATOR '-'
+
 #define CHANNELS 8
 
 #define MAX_BUF 256
@@ -74,7 +76,7 @@ void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
         _delay_ms(1000 / freq); // ms = 1000 / Hz
     }
     // UART_putChar('\0');// from uart.c
-    UART_putString("\0"); // from uart2.c: not working
+    UART_putString((uint8_t *)"-"); // from uart2.c: not working
 }
 
 void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
@@ -105,7 +107,7 @@ void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
     for (uint8_t i = 0; i < buf_cnt; ++i)
         put_sample(ch_send_buf[i], val_send_buf[i]);
     // UART_putChar('\0'); // from uart.c
-    UART_putString("\0"); // from uart2.c: not working
+    UART_putString((uint8_t *)"-"); // from uart2.c: not working
 }
 
 int main(int argc, char *argv[])
