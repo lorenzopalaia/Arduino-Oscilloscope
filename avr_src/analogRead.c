@@ -8,7 +8,7 @@
 #include <avr/io.h>
 #include "../avr_common/int.c"
 #include "../avr_common/adc.c"
-#include "../avr_common/uart.h"
+#include "../avr_common/uart2.h"
 
 #define CONTINUOUS_MODE 0
 #define BUFFERED_MODE 1
@@ -73,7 +73,8 @@ void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
             }
         _delay_ms(1000 / freq); // ms = 1000 / Hz
     }
-    UART_putChar('\0');
+    // UART_putChar('\0');// from uart.c
+    UART_putString("\0"); // from uart2.c: not working
 }
 
 void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
@@ -103,7 +104,8 @@ void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
     // empty residuals in buffer
     for (uint8_t i = 0; i < buf_cnt; ++i)
         put_sample(ch_send_buf[i], val_send_buf[i]);
-    UART_putChar('\0');
+    // UART_putChar('\0'); // from uart.c
+    UART_putString("\0"); // from uart2.c: not working
 }
 
 int main(int argc, char *argv[])
