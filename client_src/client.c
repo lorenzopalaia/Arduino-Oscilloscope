@@ -8,7 +8,7 @@
 
 #define CHANNELS 8
 
-#define DEFAULT_BUFFERS_SIZE 256
+#define DEF_BUF_SIZE 256
 
 #define DISABLED 0
 #define ENABLED 1
@@ -56,8 +56,8 @@ void close_output_fds(int output_fds[CHANNELS])
 int open_arduino()
 {
     printf("Looking for Arduino on serial port...\n");
-    FILE *fp = popen("find /dev/cu.usbmodem*", "r"); // subprocess
-    char path[DEFAULT_BUFFERS_SIZE];
+    FILE *fp = popen("find /dev/cu.usbmodem*", "r"); // run subprocess
+    char path[DEF_BUF_SIZE];
     if (fp == NULL)
     {
         printf("Arduino not found!\n");
@@ -80,6 +80,7 @@ int open_arduino()
         printf("Error opening Arduino connection!\n");
         exit(EXIT_FAILURE);
     }
+
     printf("Arduino connection open!\n");
     return fd;
 }
@@ -142,7 +143,7 @@ void get_channels(int channels[CHANNELS])
     do
     {
         invalid_input = 0;
-        char input[DEFAULT_BUFFERS_SIZE];
+        char input[DEF_BUF_SIZE];
         printf("Insert enabled channels (with spacing) [8 values: {0: disabled, 1: enabled}]: ");
         scanf("%d %d %d %d %d %d %d %d", &channels[0], &channels[1], &channels[2], &channels[3], &channels[4], &channels[5], &channels[6], &channels[7]);
         // validation
@@ -172,16 +173,6 @@ void INThandler(int _)
 
 int main(int argc, char *argv[])
 {
-    // controllare connessione con arduino
-    // DONE: imposta parametri di connessione con arduino
-    // loop infinito
-    //   DONE: imposta parametri: canali, frequenza, # campioni, modalità
-    //   DONE: mostra resoconto e chiedi conferma
-    //   DONE: invia parametri ad Arduino
-    //   DONE: ricevi samples
-    //   DONE: dumpa su file
-    //   TODO: controllare chiusura di tutto
-
     // install a keyboard INT handler
     struct sigaction act;
     act.sa_handler = INThandler;
@@ -205,18 +196,15 @@ int main(int argc, char *argv[])
 
     while (1) // main loop
     {
-        int freq;
-        int samples;
-        int mode;
+        int freq, samples, mode;
         int channels[CHANNELS] = {DISABLED, DISABLED, DISABLED, DISABLED, DISABLED, DISABLED, DISABLED, DISABLED};
 
         char ready = 'N';
 
         // params setup: channels, frequency, # samples, mode
+        // input param loop
         while (ready != 'Y' && ready != 'y')
         {
-            // input param loop
-
             // get freq param from user
             do
             {
@@ -250,19 +238,20 @@ int main(int argc, char *argv[])
             system("clear");
         }
 
-        // format out string
-        char out_str[DEFAULT_BUFFERS_SIZE];
-        snprintf(out_str, DEFAULT_BUFFERS_SIZE, "%d %d %d,", freq, samples, mode);
+        // format outgoing string (arduino's input)
+        char out_str[DEF_BUF_SIZE];
+        snprintf(out_str, DEF_BUF_SIZE, "%d %d %d,", freq, samples, mode);
         for (int i = 0; i < CHANNELS; ++i)
         {
             if (channels[i] == 1) // if channel enabled
             {
-                char tmp[DEFAULT_BUFFERS_SIZE];
-                snprintf(tmp, DEFAULT_BUFFERS_SIZE, " %d", i);
+                char tmp[DEF_BUF_SIZE];
+                snprintf(tmp, DEF_BUF_SIZE, " %d", i);
                 strcat(out_str, tmp);
             }
         }
 
+        // write directives to arduino
         ssize_t res = write(arduino, &out_str, strlen(out_str) + 1);
         if (res == -1)
         {
@@ -304,16 +293,6 @@ int main(int argc, char *argv[])
         }
 
         printf("Dump completed!\n");
-        /*
-        char cont;
-        do
-        {
-            printf("Do you want to proceed with next sampling? [Y/N] ");
-            scanf(" %c", &cont);
-        } while (cont != 'N' || cont != 'n' || cont != 'Y' || cont != 'y');
-        if (cont == 'N' || cont == 'n')
-            break;
-        */
     }
 
     // close file descriptors

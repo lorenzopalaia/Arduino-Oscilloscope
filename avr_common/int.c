@@ -1,6 +1,8 @@
+#include <avr/interrupt.h>
+
+// setup interrupt on timer 5
 void INT_init()
 {
-    // setup interrupt on timer 5
     const uint8_t timer_duration_ms = 1;
     TCCR5A = 0;
     TCCR5B = (1 << WGM52) | (1 << CS50) | (1 << CS52);

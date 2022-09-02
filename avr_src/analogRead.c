@@ -9,7 +9,6 @@
 #include "../avr_common/int.c"
 #include "../avr_common/adc.c"
 #include "../avr_common/uart.h"
-#include <avr/interrupt.h>
 
 #define CONTINUOUS_MODE 0
 #define BUFFERED_MODE 1
@@ -33,6 +32,7 @@ void get_params(uint16_t *freq, uint16_t *samples, uint8_t *mode, uint8_t channe
 
     UART_getString(recv_buf);
 
+    // strtok is better than sscanf in this case because lenght of enabled channels string is variable
     *freq = atoi(strtok((char *)recv_buf, " "));
     *samples = atoi(strtok(NULL, " "));
     *mode = atoi(strtok(NULL, " "));
@@ -46,7 +46,6 @@ void get_params(uint16_t *freq, uint16_t *samples, uint8_t *mode, uint8_t channe
 
 void put_sample(uint8_t channel, uint16_t val)
 {
-
     char out_str[MAX_BUF];
     snprintf(out_str, MAX_BUF, "%d %d\n", channel, val);
     UART_putString((uint8_t *)out_str);
@@ -54,8 +53,6 @@ void put_sample(uint8_t channel, uint16_t val)
 
 ISR(TIMER5_COMPA_vect)
 {
-    // TODO: last value in buffer not pushed to UART
-    // using MAX_BUF instead of MAX_BUF - 1 -> everything stuck, why?
     if (buf_cnt >= MAX_BUF - 1) // if buffer full
     {
         for (uint8_t i = 0; i < MAX_BUF - 1; ++i)
@@ -117,8 +114,7 @@ int main(int argc, char *argv[])
 
     while (1) // main loop
     {
-        uint16_t freq;
-        uint16_t samples;
+        uint16_t freq, samples;
         uint8_t mode;
         uint8_t channels[CHANNELS] = {DISABLED, DISABLED, DISABLED, DISABLED, DISABLED, DISABLED, DISABLED, DISABLED};
 

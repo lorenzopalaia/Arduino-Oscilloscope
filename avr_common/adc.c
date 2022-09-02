@@ -2,7 +2,7 @@ void ADC_init(void)
 {
     // 16MHz/128 = 125kHz the ADC reference clock
     ADCSRA |= ((1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0));
-    ADMUX |= (1 << REFS0); // Set Voltage reference to Avcc (5v)
+    ADMUX |= (1 << REFS0); // Set voltage reference to Avcc (5v)
     ADCSRA |= (1 << ADEN); // Turn on ADC
     ADCSRA |= (1 << ADSC);
 } // Do an initial conversion
