@@ -42,8 +42,8 @@ Project was developed for "Sistemi Operativi" class, Ingegneria Informatica e Au
 <!-- GETTING STARTED -->
 ## Getting Started
 
-### Arduino Scheme
-The diagram shown uses Arduino Uno but it is possible to extend it to Arduino Mega 2560 reaching up to 16 different channels. For demonstration purposes we use only one potentiometer so the sampled outputs will be the same on all channels
+### Arduino Schematic
+The schematic shown uses Arduino Uno but it is possible to extend it to Arduino Mega 2560 reaching up to 16 different channels. For demonstration purposes we use only one potentiometer so the sampled outputs will be the same on all channels
 
 ![Arduino Scheme](./arduino-scheme.png)
 
