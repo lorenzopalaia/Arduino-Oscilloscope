@@ -5,18 +5,17 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <string.h>
-#include <util/delay.h>
+#include <stdint.h>
+#include <util/delay.h> //
 
-void USART_putString(char *);
+volatile uint8_t out[STRLEN]; // out buffer
+volatile uint8_t in[STRLEN];
+volatile uint8_t outp; // out buffer position
+volatile uint8_t inp;
+volatile uint8_t tx; // var to check if i'm currently transmitting
+volatile uint8_t rx;
 
-volatile char out[STRLEN]; // out buffer
-volatile char in[STRLEN];
-volatile unsigned int outp; // out buffer position
-volatile unsigned int inp;
-volatile unsigned char tx; // var to check if i'm currently transmitting
-volatile unsigned char rx;
-
-void USART_Init()
+void UART_init()
 {
     // Set baud rate
     UBRR0H = (uint8_t)(MYUBRR >> 8);
@@ -31,9 +30,9 @@ void USART_Init()
     rx = 0;
 }
 
-void USART_putString(char *buf)
+void UART_putString(uint8_t *buf)
 {
-    strcpy(out, buf);
+    strcpy(out, buf); // why +1 ?
     outp = 0;
     tx = 1;
     UCSR0B |= (1 << UDRIE0);
@@ -41,7 +40,7 @@ void USART_putString(char *buf)
         ; // wait until msg delivered
 }
 
-void USART_getString(char *buf)
+void UART_getString(uint8_t *buf)
 {
     memset(in, 0, sizeof(in));
     inp = 0;
@@ -79,22 +78,18 @@ ISR(USART0_UDRE_vect)
 }
 
 // test main
-/*
+
 int main(void)
 {
-    USART_Init();
+    UART_init();
 
-    // USART_putString("Hello ");
-    // USART_putString("world\n");
-
-    char buf[STRLEN];
+    uint8_t buf[STRLEN];
 
     while (1)
     {
-        USART_getString(buf);
-        USART_putString(buf);
+        UART_getString(buf);
+        UART_putString(buf);
     }
 
     return 0;
 }
-*/

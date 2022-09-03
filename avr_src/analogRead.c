@@ -8,15 +8,13 @@
 #include <avr/io.h>
 #include "../avr_common/int.c"
 #include "../avr_common/adc.c"
-#include "../avr_common/uart2.h"
+#include "../avr_common/uartINT.c" //? uartINT.c currently not working (but uartINT_test.c works ...), switch with uart.c
 
 #define CONTINUOUS_MODE 0
 #define BUFFERED_MODE 1
 
 #define DISABLED 0
 #define ENABLED 1
-
-#define TERMINATOR '-'
 
 #define CHANNELS 8
 
@@ -53,6 +51,7 @@ void put_sample(uint8_t channel, uint16_t val)
     UART_putString((uint8_t *)out_str);
 }
 
+//! this ISR is not compromising uartINT comunication but data is not beign transfered
 ISR(TIMER5_COMPA_vect)
 {
     if (buf_cnt >= MAX_BUF - 1) // if buffer full
