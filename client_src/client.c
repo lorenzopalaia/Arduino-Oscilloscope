@@ -264,8 +264,8 @@ int main(int argc, char *argv[])
         while (1)
         {
             res = read(arduino, &r, 1);
-            // printf("%c", r);
-            if (r == '-') // terminate reading cycle
+            printf("%c", r);
+            if (r == '-') //! terminate reading cycle, try with '-' as terminator
                 break;
             else
             {

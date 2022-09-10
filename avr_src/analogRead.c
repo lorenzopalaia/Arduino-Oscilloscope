@@ -8,7 +8,7 @@
 #include <avr/io.h>
 #include "../avr_common/int.c"
 #include "../avr_common/adc.c"
-#include "../avr_common/uartINT.c" //? uartINT.c currently not working (but uartINT_test.c works ...), switch with uart.c
+#include "../avr_common/uartINT.c" // uartINT.c currently not working (but uartINT_test.c works ...), switch with uart.c
 
 #define CONTINUOUS_MODE 0
 #define BUFFERED_MODE 1
@@ -74,8 +74,8 @@ void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
             }
         _delay_ms(1000 / freq); // ms = 1000 / Hz
     }
-    // UART_putChar('\0');// from uart.c
-    UART_putString((uint8_t *)"-"); // from uart2.c: not working
+    // UART_putChar('\0'); //! from uart.c, delete when uartINT work
+    UART_putString((uint8_t *)"-"); //? from uartINT.c: not working, try with '-' as terminator
 }
 
 void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
@@ -105,8 +105,8 @@ void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
     // empty residuals in buffer
     for (uint8_t i = 0; i < buf_cnt; ++i)
         put_sample(ch_send_buf[i], val_send_buf[i]);
-    // UART_putChar('\0'); // from uart.c
-    UART_putString((uint8_t *)"-"); // from uart2.c: not working
+    // UART_putChar('\0'); //! from uart.c, delete when uartINT work
+    UART_putString((uint8_t *)"-"); //? from uartINT.c: not working, try with '-' as terminator
 }
 
 int main(int argc, char *argv[])
