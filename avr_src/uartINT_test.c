@@ -33,6 +33,7 @@ void UART_init()
 
 uint8_t UART_getChar()
 {
+    UCSR0B |= (1 << RXCIE0);
     rx = 1;
     while (rx == 1)
         ;
@@ -103,7 +104,7 @@ int main(void)
     {
         UART_getString(buf);
         UART_putString(buf);
-        _delay_ms(1000); //! now delay works without issues, still not working in loop
+        _delay_ms(2000); //! now delay works without issues, still not working in loop
         UART_putString(buf);
     }
 
