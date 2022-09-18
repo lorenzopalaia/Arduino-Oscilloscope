@@ -14,7 +14,7 @@ void INT_enable()
 {
     cli();
     TIMSK5 |= (1 << OCIE5A);
-    sei();
+    // sei();
 }
 
 void INT_disable()

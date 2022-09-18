@@ -20,6 +20,10 @@
 
 #define MAX_BUF 256
 
+char TERMINATOR = '-';
+
+volatile uint8_t buf_tx = 0;
+
 // sending buffers and counter used for buffered sending mode
 // need to be global in order to be handled by ISR
 uint8_t ch_send_buf[MAX_BUF];
@@ -51,10 +55,10 @@ void put_sample(uint8_t channel, uint16_t val)
     UART_putString((uint8_t *)out_str);
 }
 
-//! this ISR is not compromising uartINT comunication but data is not beign transfered
+//! stucks on tx, wrong values are sent
 ISR(TIMER5_COMPA_vect)
 {
-    if (buf_cnt >= MAX_BUF - 1) // if buffer full
+    if (buf_cnt >= MAX_BUF + 1) // if buffer full
     {
         for (uint8_t i = 0; i < MAX_BUF - 1; ++i)
             put_sample(ch_send_buf[i], val_send_buf[i]); // send all buffer elements
@@ -74,8 +78,7 @@ void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
             }
         _delay_ms(1000 / freq); // ms = 1000 / Hz
     }
-    // UART_putChar('\0'); //! from uart.c, delete when uartINT work
-    UART_putString((uint8_t *)"-"); //? from uartINT.c: not working, try with '-' as terminator
+    UART_putChar(TERMINATOR);
 }
 
 void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
@@ -88,9 +91,13 @@ void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
         for (uint8_t ch = 0; ch < CHANNELS; ++ch)
             if (channels[ch] == ENABLED)
             {
-                // make reading and push to buffers
-                // this cycle will be interrupted by ISR then will resume
-                // TODO: busy waiting in order to wait until the empty interrupt occurs instead of simple interrupt
+                //* enabling next commented lines will make it work without ISR
+                // if (buf_cnt >= MAX_BUF + 1) // if buffer full
+                // {
+                //     for (uint8_t i = 0; i < MAX_BUF - 1; ++i)
+                //         put_sample(ch_send_buf[i], val_send_buf[i]); // send all buffer elements
+                //     buf_cnt = 0;                                     // reset counter
+                // }
                 uint16_t val = ADC_read(ch);
                 ch_send_buf[buf_cnt] = ch;
                 val_send_buf[buf_cnt] = val;
@@ -105,8 +112,7 @@ void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
     // empty residuals in buffer
     for (uint8_t i = 0; i < buf_cnt; ++i)
         put_sample(ch_send_buf[i], val_send_buf[i]);
-    // UART_putChar('\0'); //! from uart.c, delete when uartINT work
-    UART_putString((uint8_t *)"-"); //? from uartINT.c: not working, try with '-' as terminator
+    UART_putChar(TERMINATOR);
 }
 
 int main(int argc, char *argv[])

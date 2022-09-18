@@ -19,6 +19,8 @@
 #define MODE_CHECK(MODE) (MODE == 0 || MODE == 1)
 #define ENABLED_CHANNEL_CHECK(CHANNEL) (CHANNEL == DISABLED || CHANNEL == ENABLED)
 
+char TERMINATOR = '-';
+
 int output_fds[CHANNELS];
 int arduino;
 
@@ -31,12 +33,12 @@ void open_output_fds(int output_fds[CHANNELS])
         int fd = open(out_path, O_WRONLY | O_CREAT | O_TRUNC, 644);
         if (fd < 0) // check opening errors
         {
-            printf("Error opening output files! Missing: %s\n", out_path);
+            printf("[✗] Error opening output files! Missing: %s\n", out_path);
             exit(EXIT_FAILURE);
         }
         output_fds[i] = fd;
     }
-    printf("File descriptors opened correctly!\n");
+    printf("[✓] File descriptors opened correctly!\n");
 }
 
 void close_output_fds(int output_fds[CHANNELS])
@@ -46,21 +48,21 @@ void close_output_fds(int output_fds[CHANNELS])
         int res = close(output_fds[i]);
         if (res == -1) // check closing errors
         {
-            printf("Error closing output files!\n");
+            printf("[✗] Error closing output files!\n");
             exit(EXIT_FAILURE);
         }
     }
-    printf("File descriptors closed correctly!\n");
+    printf("[✓] File descriptors closed correctly!\n");
 }
 
 int open_arduino()
 {
-    printf("Looking for Arduino on serial port...\n");
+    printf("[!] Looking for Arduino on serial port...\n");
     FILE *fp = popen("find /dev/cu.usbmodem*", "r"); // run subprocess
     char path[DEF_BUF_SIZE];
     if (fp == NULL)
     {
-        printf("Arduino not found!\n");
+        printf("[✗] Arduino not found!\n");
         exit(EXIT_FAILURE);
     }
     fgets(path, sizeof(path), fp); // read subprocess output
@@ -69,19 +71,19 @@ int open_arduino()
 
     if (path[0] != '/') // if output does not start with '/' -> find throws a error -> serial device not found
     {
-        printf("Arduino not found!\n");
+        printf("[✗] Arduino not found!\n");
         exit(EXIT_FAILURE);
     }
-    printf("Found Arduino!\n");
+    printf("[!] Found Arduino!\n");
 
     int fd = open(path, O_RDWR | O_NOCTTY | O_SYNC); // open file descriptor
     if (fd < 0)                                      // check opening errors
     {
-        printf("Error opening Arduino connection!\n");
+        printf("[✗] Error opening Arduino connection!\n");
         exit(EXIT_FAILURE);
     }
 
-    printf("Arduino connection open!\n");
+    printf("[✓] Arduino file descriptor open!\n");
     return fd;
 }
 
@@ -93,7 +95,7 @@ void close_arduino(int arduino)
         printf("Error closing Arduino connection!\n");
         exit(EXIT_FAILURE);
     }
-    printf("Closed Arduino connection!\n");
+    printf("[✓] Closed Arduino file descriptor!\n");
 }
 
 int serial_set_interface_attribs(int fd, int speed, int parity)
@@ -102,7 +104,7 @@ int serial_set_interface_attribs(int fd, int speed, int parity)
     memset(&tty, 0, sizeof tty);
     if (tcgetattr(fd, &tty) != 0)
     {
-        printf("Error from tcgetattr\n");
+        printf("[✗] Error occurred during tcgetattr\n");
         return -1;
     }
     switch (speed)
@@ -117,7 +119,7 @@ int serial_set_interface_attribs(int fd, int speed, int parity)
         speed = B115200;
         break;
     default:
-        printf("Cannot set baudrate %d\n", speed);
+        printf("[✗] Cannot set baudrate %d\n", speed);
         return -1;
     }
     cfsetospeed(&tty, speed);
@@ -130,10 +132,10 @@ int serial_set_interface_attribs(int fd, int speed, int parity)
 
     if (tcsetattr(fd, TCSANOW, &tty) != 0)
     {
-        printf("Error from tcsettatr\n");
+        printf("[✗] Error occureed during tcsettatr\n");
         return -1;
     }
-    printf("Arduino connection setup correctly!\n");
+    printf("[✓] Arduino connection parameters setup correctly!\n");
     return 0;
 }
 
@@ -144,7 +146,7 @@ void get_channels(int channels[CHANNELS])
     {
         invalid_input = 0;
         char input[DEF_BUF_SIZE];
-        printf("Insert enabled channels (with spacing) [8 values: {0: disabled, 1: enabled}]: ");
+        printf("[?] Insert enabled channels (with spacing) [8 values: {0: disabled, 1: enabled}]: ");
         scanf("%d %d %d %d %d %d %d %d", &channels[0], &channels[1], &channels[2], &channels[3], &channels[4], &channels[5], &channels[6], &channels[7]);
         // validation
         int enabled_channels = 0;
@@ -165,7 +167,7 @@ void get_channels(int channels[CHANNELS])
 
 void INThandler(int _)
 {
-    printf("\nCatch keyboard interruption! Terminating...\n");
+    printf("\n[!] Catch keyboard interruption! Terminating...\n");
     close_output_fds(output_fds);
     close_arduino(arduino);
     exit(EXIT_FAILURE);
@@ -180,14 +182,14 @@ int main(int argc, char *argv[])
 
     // welcome message
     system("clear");
-    printf("Welcome to Arduino Oscilloscope\n");
+    printf("[!] Welcome to Arduino Oscilloscope\n");
 
     // check Arduino connection
     arduino = open_arduino();
     int res = serial_set_interface_attribs(arduino, 19200, 0);
     if (res != 0)
     {
-        printf("Error during serial attributes setup\n");
+        printf("[✗] Error during serial attributes setup\n");
         exit(EXIT_FAILURE);
     }
 
@@ -208,32 +210,32 @@ int main(int argc, char *argv[])
             // get freq param from user
             do
             {
-                printf("Insert sampling frquency [1Hz - 1000Hz]: ");
+                printf("[!] CTRL + C to exit\n[?] Insert sampling frquency [1Hz - 1000Hz]: ");
                 scanf("%d", &freq);
             } while (!FREQ_CHECK(freq));
             // get samples param from user
             do
             {
-                printf("Insert samples [1 - 10000]: ");
+                printf("[?] Insert samples [1 - 10000]: ");
                 scanf("%d", &samples);
             } while (!SAMPLES_CHECK(samples));
             // get mode param from user
             do
             {
-                printf("Insert mode {0: continuos, 1: buffered}: ");
+                printf("[?] Insert mode {0: continuos, 1: buffered}: ");
                 scanf("%d", &mode);
             } while (!MODE_CHECK(mode));
             // get channels param from user
             get_channels(channels);
 
             system("clear");
-            printf("Freq: %dHz\n", freq);
-            printf("Samples: %d\n", samples);
-            printf("Mode: %d\n", mode);
-            printf("Enabled Channels: ");
+            printf("[!] Freq: %dHz\n", freq);
+            printf("[!] Samples: %d\n", samples);
+            printf("[!] Mode: %d\n", mode);
+            printf("[!] Enabled Channels: ");
             for (int i = 0; i < CHANNELS; ++i)
                 printf("%d: %d\t", i, channels[i]);
-            printf("\nDo you want to start sampling? [Y/N] ");
+            printf("\n[?] Do you want to start sampling? [Y/N] ");
             scanf(" %c", &ready);
             system("clear");
         }
@@ -255,7 +257,7 @@ int main(int argc, char *argv[])
         ssize_t res = write(arduino, &out_str, strlen(out_str) + 1);
         if (res == -1)
         {
-            printf("Error writing on serial\n");
+            printf("[✗] Error writing on serial\n");
             exit(EXIT_FAILURE);
         }
 
@@ -264,8 +266,8 @@ int main(int argc, char *argv[])
         while (1)
         {
             res = read(arduino, &r, 1);
-            printf("%c", r);
-            if (r == '-') //! terminate reading cycle, try with '-' as terminator
+            // printf("%c", r);
+            if (r == TERMINATOR)
                 break;
             else
             {
@@ -282,7 +284,7 @@ int main(int argc, char *argv[])
                     ssize_t wr_bytes = write(output_fds[ch], out, strlen(out));
                     if (wr_bytes == -1)
                     {
-                        printf("Error writing on output\n");
+                        printf("[✗] Error writing on output\n");
                         exit(EXIT_FAILURE);
                     }
                     memset(wr_buf, 0, 8); // clear wr_buf
@@ -292,7 +294,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        printf("Dump completed!\n");
+        printf("[✓] Dump completed!\n");
     }
 
     // close file descriptors
