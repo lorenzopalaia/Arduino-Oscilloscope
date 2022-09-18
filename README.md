@@ -25,7 +25,19 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-Project was developed for "Sistemi Operativi" class, Ingegneria Informatica e Automatica, Università La Sapienza
+Project was developed for "Sistemi Operativi" class, Ingegneria Informatica e Automatica, Università La Sapienza. The project involves the development of an oscilloscope that samples an adjustable voltage through a potentiometer up to 8 channels. 
+
+### Arduino
+
+The oscilloscope samples in two modes, continuous and buffered, according to the other parameters received by the computer which are the sampling frequency, the number of samples and the channels to be sampled. The communication is realized through interrupt and the sent strings are well defined so that they can be tokenized by both devices. The voltage value is sampled in a range between 0 and 1023 by the ADC, associated with the correct channel number and sent to the client on the computer that converts it into a voltage in the range between 0V and 5V.
+
+### Client
+
+The client starts searching the Arduino among the serial ports, opens its file descriptor, sets the communication parameters via termios and finally opens the descriptors of the output files. This whole phase is accompanied by a precise error handling. In the main loop, the program asks the user to enter the parameters for sampling, asks for confirmation by showing them and sends them on the serial. The user input phase is also readily managed, this time by macros. The client then puts on hold to receive the samples on the serial and then writes them to the output files, one for each channel. An interrupt manager has been installed to exit the main loop. When this is called, it will execute the functions to terminate the program correctly, taking care to close all the open resources in order to not occur in memory leaks.
+
+### Gnuplot
+
+A last line is inserted in the shell script which invokes Gnuplot to plot the sampled data at client termination.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -34,6 +46,10 @@ Project was developed for "Sistemi Operativi" class, Ingegneria Informatica e Au
 ### Built With
 
 * [Arduino](https://www.arduino.cc/)
+* C
+* AVR C
+* Makefile
+* [Gnuplot](http://www.gnuplot.info/)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
