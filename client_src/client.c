@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
         while (1)
         {
             res = read(arduino, &r, 1);
-            printf("%c", r);
+            // printf("%c", r); // for debug purposes
             if (r == TERMINATOR)
                 break;
             else

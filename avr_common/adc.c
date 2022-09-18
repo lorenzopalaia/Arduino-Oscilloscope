@@ -2,11 +2,12 @@ void ADC_init(void)
 {
     // 16MHz/128 = 125kHz the ADC reference clock
     ADCSRA |= ((1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0));
-    ADMUX |= (1 << REFS0); // Set voltage reference to Avcc (5v)
+    ADMUX |= (1 << REFS0); // Set voltage reference to VCC (5V)
     ADCSRA |= (1 << ADEN); // Turn on ADC
     ADCSRA |= (1 << ADSC);
-} // Do an initial conversion
+}
 
+// Returns the ADC value of the chosen channel
 uint16_t ADC_read(uint8_t channel)
 {
     ADMUX &= 0xE0;               // Clear bits MUX0-4
@@ -16,4 +17,4 @@ uint16_t ADC_read(uint8_t channel)
     while (ADCSRA & (1 << ADSC))
         continue; // Wait until the conversion is done
     return ADCW;
-} // Returns the ADC value of the chosen channel
+}

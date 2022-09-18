@@ -53,6 +53,12 @@ The schematic shown uses Arduino Uno but it is possible to extend it to Arduino 
    ```sh
    git clone https://github.com/lorenzopalaia/Arduino-Oscilloscope.git
    ```
+
+2. Plug in your Arduino, get in the project folder and run
+   ```sh
+   cd Arduino-Oscilloscope
+   sh run.sh
+   ```
    
 <p align="right">(<a href="#top">back to top</a>)</p>
 

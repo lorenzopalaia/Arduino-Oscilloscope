@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cd avr_src
-make analogRead.hex
+make arduino.hex
 make clean
 cd ../client_src
 gcc -o client client.c
