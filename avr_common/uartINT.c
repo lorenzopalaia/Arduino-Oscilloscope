@@ -72,7 +72,6 @@ void UART_putChar(uint8_t c)
   UCSR0B |= (1 << UDRIE0);
   while (tx == 1)
     ;
-  cli();
 }
 
 void UART_putString(uint8_t *buf)

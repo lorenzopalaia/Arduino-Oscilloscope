@@ -8,7 +8,7 @@
 #include <avr/io.h>
 #include "../avr_common/int.c"
 #include "../avr_common/adc.c"
-#include "../avr_common/uartINT.c" // uartINT.c currently not working (but uartINT_test.c works ...), switch with uart.c
+#include "../avr_common/uartINT.c"
 
 #define CONTINUOUS_MODE 0
 #define BUFFERED_MODE 1
@@ -18,21 +18,19 @@
 
 #define CHANNELS 8
 
-#define MAX_BUF 256
+#define DEFAULT_BUF_SIZE 32
 
 char TERMINATOR = '-';
 
-volatile uint8_t buf_tx = 0;
-
 // sending buffers and counter used for buffered sending mode
 // need to be global in order to be handled by ISR
-uint8_t ch_send_buf[MAX_BUF];
-uint16_t val_send_buf[MAX_BUF];
+uint8_t ch_send_buf[DEFAULT_BUF_SIZE];
+uint16_t val_send_buf[DEFAULT_BUF_SIZE];
 uint16_t buf_cnt = 0;
 
 void get_params(uint16_t *freq, uint16_t *samples, uint8_t *mode, uint8_t channels[])
 {
-    uint8_t recv_buf[MAX_BUF]; // receiving buffer
+    uint8_t recv_buf[DEFAULT_BUF_SIZE]; // receiving buffer
 
     UART_getString(recv_buf);
 
@@ -50,21 +48,21 @@ void get_params(uint16_t *freq, uint16_t *samples, uint8_t *mode, uint8_t channe
 
 void put_sample(uint8_t channel, uint16_t val)
 {
-    char out_str[MAX_BUF];
-    snprintf(out_str, MAX_BUF, "%d %d\n", channel, val);
+    char out_str[DEFAULT_BUF_SIZE];
+    snprintf(out_str, DEFAULT_BUF_SIZE, "%d %d\n", channel, val);
     UART_putString((uint8_t *)out_str);
 }
 
 //! stucks on tx, wrong values are sent
-ISR(TIMER5_COMPA_vect)
-{
-    if (buf_cnt >= MAX_BUF + 1) // if buffer full
-    {
-        for (uint8_t i = 0; i < MAX_BUF - 1; ++i)
-            put_sample(ch_send_buf[i], val_send_buf[i]); // send all buffer elements
-        buf_cnt = 0;                                     // reset counter
-    }
-}
+// ISR(TIMER5_COMPA_vect)
+//{
+//     if (buf_cnt >= DEFAULT_BUF_SIZE + 1) // if buffer full
+//     {
+//         for (uint8_t i = 0; i < DEFAULT_BUF_SIZE - 1; ++i)
+//             put_sample(ch_send_buf[i], val_send_buf[i]); // send all buffer elements
+//         buf_cnt = 0;                                     // reset counter
+//     }
+// }
 
 void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
 {
@@ -84,40 +82,45 @@ void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
 void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
 {
     // enable interrupt on timer 5
-    INT_enable();
+    // INT_enable();
 
-    for (uint8_t sample = 0; sample < samples; ++sample)
+    uint8_t i;
+    buf_cnt = 0;
+
+    for (uint16_t sample = 0; sample < samples; ++sample)
     {
         for (uint8_t ch = 0; ch < CHANNELS; ++ch)
+        {
+            //* enabling next commented lines will make it work without ISR
+            if (buf_cnt >= DEFAULT_BUF_SIZE) // if buffer full
+            {
+                for (i = 0; i < DEFAULT_BUF_SIZE; ++i)
+                    put_sample(ch_send_buf[i], val_send_buf[i]); // send all buffer elements
+                buf_cnt = 0;                                     // reset counter
+            }
             if (channels[ch] == ENABLED)
             {
-                //* enabling next commented lines will make it work without ISR
-                // if (buf_cnt >= MAX_BUF + 1) // if buffer full
-                // {
-                //     for (uint8_t i = 0; i < MAX_BUF - 1; ++i)
-                //         put_sample(ch_send_buf[i], val_send_buf[i]); // send all buffer elements
-                //     buf_cnt = 0;                                     // reset counter
-                // }
                 uint16_t val = ADC_read(ch);
                 ch_send_buf[buf_cnt] = ch;
                 val_send_buf[buf_cnt] = val;
                 ++buf_cnt;
             }
-        _delay_ms(1000 / freq); // ms = 1000 / Hz
+            _delay_ms(1000 / freq); // ms = 1000 / Hz
+        }
     }
 
     // disable interrupt on timer 5
-    INT_disable();
+    // INT_disable();
 
     // empty residuals in buffer
-    for (uint8_t i = 0; i < buf_cnt; ++i)
+    for (i = 0; i < buf_cnt; ++i)
         put_sample(ch_send_buf[i], val_send_buf[i]);
     UART_putChar(TERMINATOR);
 }
 
 int main(int argc, char *argv[])
 {
-    INT_init();
+    // INT_init();
     UART_init();
     ADC_init();
 

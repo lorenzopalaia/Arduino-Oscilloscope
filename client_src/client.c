@@ -8,7 +8,7 @@
 
 #define CHANNELS 8
 
-#define DEF_BUF_SIZE 256
+#define DEFAULT_BUF_SIZE 256
 
 #define DISABLED 0
 #define ENABLED 1
@@ -59,7 +59,7 @@ int open_arduino()
 {
     printf("[!] Looking for Arduino on serial port...\n");
     FILE *fp = popen("find /dev/cu.usbmodem*", "r"); // run subprocess
-    char path[DEF_BUF_SIZE];
+    char path[DEFAULT_BUF_SIZE];
     if (fp == NULL)
     {
         printf("[✗] Arduino not found!\n");
@@ -145,7 +145,7 @@ void get_channels(int channels[CHANNELS])
     do
     {
         invalid_input = 0;
-        char input[DEF_BUF_SIZE];
+        char input[DEFAULT_BUF_SIZE];
         printf("[?] Insert enabled channels (with spacing) [8 values: {0: disabled, 1: enabled}]: ");
         scanf("%d %d %d %d %d %d %d %d", &channels[0], &channels[1], &channels[2], &channels[3], &channels[4], &channels[5], &channels[6], &channels[7]);
         // validation
@@ -241,14 +241,14 @@ int main(int argc, char *argv[])
         }
 
         // format outgoing string (arduino's input)
-        char out_str[DEF_BUF_SIZE];
-        snprintf(out_str, DEF_BUF_SIZE, "%d %d %d,", freq, samples, mode);
+        char out_str[DEFAULT_BUF_SIZE];
+        snprintf(out_str, DEFAULT_BUF_SIZE, "%d %d %d,", freq, samples, mode);
         for (int i = 0; i < CHANNELS; ++i)
         {
             if (channels[i] == 1) // if channel enabled
             {
-                char tmp[DEF_BUF_SIZE];
-                snprintf(tmp, DEF_BUF_SIZE, " %d", i);
+                char tmp[DEFAULT_BUF_SIZE];
+                snprintf(tmp, DEFAULT_BUF_SIZE, " %d", i);
                 strcat(out_str, tmp);
             }
         }
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
         while (1)
         {
             res = read(arduino, &r, 1);
-            // printf("%c", r);
+            printf("%c", r);
             if (r == TERMINATOR)
                 break;
             else
