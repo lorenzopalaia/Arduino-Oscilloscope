@@ -15,6 +15,6 @@ uint16_t ADC_read(uint8_t channel)
     ADCSRB = channel & (1 << 3); // Set MUX5
     ADCSRA |= (1 << ADSC);       // Starts a new conversion
     while (ADCSRA & (1 << ADSC))
-        continue; // Wait until the conversion is done
+        ; // Wait until the conversion is done
     return ADCW;
 }

@@ -1,4 +1,4 @@
-#define __DELAY_BACKWARD_COMPATIBLE__ // _delay_ms function will only accept constants without this
+#define __DELAY_BACKWARD_COMPATIBLE__ //* _delay_ms function will only accept constants without this
 
 #include <util/delay.h>
 #include <stdio.h>
@@ -27,7 +27,7 @@ void get_params(uint16_t *freq, uint16_t *samples, uint8_t *mode, uint8_t channe
 
     UART_getString(recv_buf);
 
-    // strtok is better than sscanf in this case because lenght of enabled channels string is variable
+    //* strtok is better than sscanf in this case because lenght of enabled channels string is variable
     *freq = atoi(strtok((char *)recv_buf, " "));
     *samples = atoi(strtok(NULL, " "));
     *mode = atoi(strtok(NULL, " "));
@@ -56,7 +56,7 @@ void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
                 uint16_t val = ADC_read(ch);
                 put_sample(ch, val);
             }
-        _delay_ms(1000 / freq); // ms = 1000 / Hz
+        _delay_ms(1000 / freq); //* ms = 1000 / Hz
     }
     UART_putChar(TERMINATOR);
 }
@@ -85,7 +85,7 @@ void buffered_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
                 val_send_buf[buf_cnt] = val;
                 ++buf_cnt;
             }
-            _delay_ms(1000 / freq); // ms = 1000 / Hz
+            _delay_ms(1000 / freq); //* ms = 1000 / Hz
         }
     }
 

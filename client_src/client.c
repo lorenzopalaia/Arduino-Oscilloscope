@@ -92,20 +92,20 @@ void close_arduino(int arduino)
     int res = close(arduino);
     if (res == -1) // check closing errors
     {
-        printf("Error closing Arduino connection!\n");
+        printf("[✗] Error closing Arduino connection!\n");
         exit(EXIT_FAILURE);
     }
     printf("[✓] Closed Arduino file descriptor!\n");
 }
 
-int serial_set_interface_attribs(int fd, int speed, int parity)
+void serial_set_interface_attribs(int fd, int speed, int parity)
 {
     struct termios tty;
     memset(&tty, 0, sizeof tty);
     if (tcgetattr(fd, &tty) != 0)
     {
         printf("[✗] Error occurred during tcgetattr\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
     switch (speed)
     {
@@ -120,7 +120,7 @@ int serial_set_interface_attribs(int fd, int speed, int parity)
         break;
     default:
         printf("[✗] Cannot set baudrate %d\n", speed);
-        return -1;
+        exit(EXIT_FAILURE);
     }
     cfsetospeed(&tty, speed);
     cfsetispeed(&tty, speed);
@@ -133,10 +133,9 @@ int serial_set_interface_attribs(int fd, int speed, int parity)
     if (tcsetattr(fd, TCSANOW, &tty) != 0)
     {
         printf("[✗] Error occureed during tcsettatr\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
     printf("[✓] Arduino connection parameters setup correctly!\n");
-    return 0;
 }
 
 void get_channels(int channels[CHANNELS])
@@ -148,7 +147,7 @@ void get_channels(int channels[CHANNELS])
         char input[DEFAULT_BUF_SIZE];
         printf("[?] Insert enabled channels (with spacing) [8 values: {0: disabled, 1: enabled}]: ");
         scanf("%d %d %d %d %d %d %d %d", &channels[0], &channels[1], &channels[2], &channels[3], &channels[4], &channels[5], &channels[6], &channels[7]);
-        // validation
+        //* validation cycle: if at least one missing/wrong input -> restart
         int enabled_channels = 0;
         for (int i = 0; i < CHANNELS; ++i)
         {
@@ -175,7 +174,7 @@ void INThandler(int _)
 
 int main(int argc, char *argv[])
 {
-    // install a keyboard INT handler
+    //* install a keyboard INT handler
     struct sigaction act;
     act.sa_handler = INThandler;
     sigaction(SIGINT, &act, NULL);
@@ -186,12 +185,7 @@ int main(int argc, char *argv[])
 
     // check Arduino connection
     arduino = open_arduino();
-    int res = serial_set_interface_attribs(arduino, 19200, 0);
-    if (res != 0)
-    {
-        printf("[✗] Error during serial attributes setup\n");
-        exit(EXIT_FAILURE);
-    }
+    serial_set_interface_attribs(arduino, 19200, 0);
 
     // open file descriptors, store them inside an array of file descriptors
     open_output_fds(output_fds);
@@ -207,25 +201,25 @@ int main(int argc, char *argv[])
         // input param loop
         while (ready != 'Y' && ready != 'y')
         {
-            // get freq param from user
+            //* get freq param from user
             do
             {
                 printf("[!] CTRL + C to exit\n[?] Insert sampling frquency [1Hz - 1000Hz]: ");
                 scanf("%d", &freq);
             } while (!FREQ_CHECK(freq));
-            // get samples param from user
+            //* get samples param from user
             do
             {
                 printf("[?] Insert samples [1 - 10000]: ");
                 scanf("%d", &samples);
             } while (!SAMPLES_CHECK(samples));
-            // get mode param from user
+            //* get mode param from user
             do
             {
                 printf("[?] Insert mode {0: continuos, 1: buffered}: ");
                 scanf("%d", &mode);
             } while (!MODE_CHECK(mode));
-            // get channels param from user
+            //* get channels param from user
             get_channels(channels);
 
             system("clear");
@@ -240,12 +234,12 @@ int main(int argc, char *argv[])
             system("clear");
         }
 
-        // format outgoing string (arduino's input)
+        //* format outgoing string (arduino's input)
         char out_str[DEFAULT_BUF_SIZE];
         snprintf(out_str, DEFAULT_BUF_SIZE, "%d %d %d,", freq, samples, mode);
         for (int i = 0; i < CHANNELS; ++i)
         {
-            if (channels[i] == 1) // if channel enabled
+            if (channels[i] == ENABLED)
             {
                 char tmp[DEFAULT_BUF_SIZE];
                 snprintf(tmp, DEFAULT_BUF_SIZE, " %d", i);
@@ -253,7 +247,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        // write directives to arduino
+        //* write directives to arduino
         ssize_t res = write(arduino, &out_str, strlen(out_str) + 1);
         if (res == -1)
         {
@@ -261,12 +255,13 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
+        //* reading cycle from arduino: if TERMINATOR -> break, if \n -> write line to outputs, else -> append to writing buffer
         char r;
-        char wr_buf[8]; // len of 6 chars + \n + \0 = 8
+        char wr_buf[8]; //* len of 6 chars + \n + \0 = 8
         while (1)
         {
             res = read(arduino, &r, 1);
-            // printf("%c", r); // for debug purposes
+            // printf("%c", r); //! for debug purposes
             if (r == TERMINATOR)
                 break;
             else
@@ -276,10 +271,10 @@ int main(int argc, char *argv[])
                     // elaboration
                     int ch;
                     float val;
-                    char out[9]; // len of 7 chars + \n + \0
+                    char out[9]; //* len of 7 chars + \n + \0
                     sscanf(wr_buf, "%d %f", &ch, &val);
-                    val = 5 * val / 1024;
-                    snprintf(out, 9, "%.5f\n", val); // string formatter + value conversion
+                    val = 5 * val / 1024;            //* here comes the 0-1023 to 0V-5V mapping
+                    snprintf(out, 9, "%.5f\n", val); // string formatter
                     // fd to be written is estabilished by ch variable which selects the correct index
                     ssize_t wr_bytes = write(output_fds[ch], out, strlen(out));
                     if (wr_bytes == -1)
