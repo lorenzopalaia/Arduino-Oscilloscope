@@ -48,10 +48,10 @@ void put_sample(uint8_t channel, uint16_t val)
 
 void continuous_sampling(uint16_t freq, uint16_t samples, uint8_t channels[])
 {
-    for (uint8_t sample = 0; sample < samples; ++sample)
+    for (uint16_t sample = 0; sample < samples; ++sample)
     {
         for (uint8_t ch = 0; ch < CHANNELS; ++ch)
-            if (channels[ch] == 1)
+            if (channels[ch] == ENABLED)
             {
                 uint16_t val = ADC_read(ch);
                 put_sample(ch, val);
