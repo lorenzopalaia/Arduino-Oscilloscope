@@ -25,6 +25,8 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
+![Preview](repo_assets/preview.png)
+
 Project was developed for "Sistemi Operativi" class, Ingegneria Informatica e Automatica, Università La Sapienza. The project involves the development of an oscilloscope that samples an adjustable voltage through a potentiometer up to 8 channels. 
 
 ### Arduino
